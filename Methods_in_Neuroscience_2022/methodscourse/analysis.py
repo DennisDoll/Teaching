@@ -1,6 +1,5 @@
-       
-
 import numpy as np
+import math
             
 import imageio as iio
 from skimage.feature import match_template
@@ -17,9 +16,6 @@ MIN_DISTANCE = 25
 THRESHOLD = 0.25
 MIN_CLIMBING_HEIGHT = 600 
     
-    
-       
-            
 
 class FlyDetector:
     
@@ -27,24 +23,30 @@ class FlyDetector:
         self.file_id = file_id
         self.database = database
         self.file_info = self.database.get_file_info_df(file_id = self.file_id)
-        if None in self.file_info['all_detected_flies']:
-            times_to_analyze = [self.file_info['time_passed'][i] for i in range(len(self.file_info['time_passed'])) if self.file_info['all_detected_flies'][i] == None]
+
+
+    def run(self):
+        times_to_analyze = list()
+        for i in range(len(self.file_info['time_passed'])):
+            if (self.file_info['all_detected_flies'][i] == None) or (math.isnan(self.file_info['all_detected_flies'][i])):
+                times_to_analyze.append(self.file_info['time_passed'][i])
+            
+        if len(times_to_analyze) > 0:
             for time_passed in times_to_analyze:
-                all_fly_coords, vial_cropping_coords, corrected_fly_coords = self.run_fly_detection(time_passed = time_passed)
+                all_fly_coords, vial_cropping_coords, corrected_fly_coords = self.detect_flies(time_passed = time_passed)
                 self.database.add_detected_flies(file_id = self.file_id, 
                                                  time_passed = time_passed, 
                                                  all_fly_coords = all_fly_coords,
                                                  vial_cropping_coords = vial_cropping_coords, 
                                                  corrected_fly_coords = corrected_fly_coords)
-            
+
         else:
             print(f'Flies were already annotated for file_id: {self.file_id} - continue with next file.')
             
-        return self.database
-            
+        return self.database    
         
             
-    def run_fly_detection(self, time_passed: int) -> Tuple[List, Tuple, List]:
+    def detect_flies(self, time_passed: int) -> Tuple[List, Tuple, List]:
         frame_index = time_passed*30
 
         reader = iio.get_reader(self.file_info['video_filepath'][0])
@@ -98,7 +100,7 @@ class FlyDetector:
 
         
     def get_vial_cropping_info_from_foam_matching(self, image: np.ndarray, foam_template: np.ndarray) -> Tuple[int, int]:
-        foam_results = match_template(image[0:500], foam_tempalte)
+        foam_results = match_template(image[0:500], foam_template)
         row_idx, col_idx = np.unravel_index(foam_results[...,0].argmax(), foam_results[...,0].shape)
         row = foam_results[...,0][row_idx]
         column = foam_results[...,0][:, col_idx]

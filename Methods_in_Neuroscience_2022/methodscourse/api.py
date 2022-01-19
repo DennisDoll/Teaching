@@ -13,4 +13,11 @@ class API:
 
     def detect_flies(self, file_ids: List):
         for file_id in file_ids:
-            self.database = FlyDetector(file_id = file_id, database = self.database)
+            fly_detector = FlyDetector(file_id = file_id, database = self.database)
+            self.database = fly_detector.run()
+            
+    def save_results(self, prefix: str):
+        self.database.save_file_infos(prefix = prefix)
+        
+    def load_results(self):
+        self.database.load_file_infos()
