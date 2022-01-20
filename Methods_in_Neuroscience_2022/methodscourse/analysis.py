@@ -1,5 +1,7 @@
 import numpy as np
 import math
+
+import matplotlib.pyplot as plt
             
 import imageio as iio
 from skimage.feature import match_template
@@ -10,35 +12,54 @@ from .database import Database, list_no_hidden
 
 from typing import List, Dict, Tuple
             
-
-CROPPING_BUFFER_ZONE = 100
-MIN_DISTANCE = 25
-THRESHOLD = 0.25
-MIN_CLIMBING_HEIGHT = 600 
     
 
 class FlyDetector:
     
-    def __init__(self, file_id: str, database: Database) -> Database:
+    def __init__(self, 
+                 file_id: str, database: Database, 
+                 cropping_buffer_zone: int, 
+                 min_climbing_height: int,
+                 threshold: float,
+                 min_distance: int,
+                 overwrite: bool,
+                 quick_view: bool):
         self.file_id = file_id
         self.database = database
+        self.cropping_buffer_zone = cropping_buffer_zone
+        self.min_climbing_height = min_climbing_height
+        self.threshold = threshold
+        self.min_distance = min_distance
+        self.detection_configs = {'cropping_buffer_zone': cropping_buffer_zone, 
+                                  'min_climbing_height' : min_climbing_height, 
+                                  'threshold': threshold,
+                                  'min_distance': min_distance}
         self.file_info = self.database.get_file_info_df(file_id = self.file_id)
+        self.overwrite = overwrite
+        self.quick_view = quick_view
+        
 
 
-    def run(self):
+    def run(self) -> Database:
         times_to_analyze = list()
         for i in range(len(self.file_info['time_passed'])):
-            if (self.file_info['all_detected_flies'][i] == None) or (math.isnan(self.file_info['all_detected_flies'][i])):
+            if self.overwrite:
                 times_to_analyze.append(self.file_info['time_passed'][i])
+            else:
+                if (self.file_info['all_detected_flies'][i] == None) or (math.isnan(self.file_info['all_detected_flies'][i])):
+                    times_to_analyze.append(self.file_info['time_passed'][i])
             
         if len(times_to_analyze) > 0:
+            if self.quick_view:
+                times_to_analyze = [times_to_analyze[0]]
             for time_passed in times_to_analyze:
                 all_fly_coords, vial_cropping_coords, corrected_fly_coords = self.detect_flies(time_passed = time_passed)
                 self.database.add_detected_flies(file_id = self.file_id, 
                                                  time_passed = time_passed, 
                                                  all_fly_coords = all_fly_coords,
                                                  vial_cropping_coords = vial_cropping_coords, 
-                                                 corrected_fly_coords = corrected_fly_coords)
+                                                 corrected_fly_coords = corrected_fly_coords, 
+                                                 detection_configs = self.detection_configs)
 
         else:
             print(f'Flies were already annotated for file_id: {self.file_id} - continue with next file.')
@@ -53,9 +74,10 @@ class FlyDetector:
         image = reader.get_data(frame_index)
         reader.close()
 
-        vial_cropping_coords = self.get_vial_cropping_info_from_foam_matching(image, self.database.foam_template)
-        min_col_idx, max_col_idx = vial_cropping_coords
-        vial = image[200:1000, min_col_idx-CROPPING_BUFFER_ZONE : max_col_idx+CROPPING_BUFFER_ZONE]
+        min_col_idx, max_col_idx = self.get_vial_cropping_info_from_foam_matching(image, self.database.foam_template)
+        vial_cropping_coords = (min_col_idx-self.cropping_buffer_zone, max_col_idx+self.cropping_buffer_zone)
+        vial = image[200:1000, vial_cropping_coords[0] - 100 : vial_cropping_coords[1] + 100]
+        # make cropping adjustable while displayed item is always 100 pixels more on both sides?
 
         template_flies = list()
         for filename in list_no_hidden(f'{self.database.templates_dir}flies/'):
@@ -74,7 +96,7 @@ class FlyDetector:
         bkgr_mean_results = sum(template_matching_results['bkgrs']) / len(template_matching_results['bkgrs'])
         bkgr_corrected_results = fly_mean_results - bkgr_mean_results
 
-        flies_xy = peak_local_max(bkgr_corrected_results[..., 0], min_distance=MIN_DISTANCE,threshold_abs=THRESHOLD)
+        flies_xy = peak_local_max(bkgr_corrected_results[..., 0], min_distance=self.min_distance, threshold_abs=self.threshold)
         all_fly_coords = flies_xy.copy()
         all_fly_coords[:,0] += 15
         all_fly_coords[:, 1] += 20
@@ -84,8 +106,8 @@ class FlyDetector:
         corrected_fly_coords_as_list = all_fly_coords_as_list.copy()
         idx_to_pop = list()
         for fly_index in range(len(corrected_fly_coords_as_list)):
-            if CROPPING_BUFFER_ZONE < corrected_fly_coords_as_list[fly_index][1] < vial.shape[1] - CROPPING_BUFFER_ZONE:
-                if MIN_CLIMBING_HEIGHT > corrected_fly_coords_as_list[fly_index][0]:
+            if 100 < corrected_fly_coords_as_list[fly_index][1] < vial.shape[1] - 100:
+                if self.min_climbing_height > corrected_fly_coords_as_list[fly_index][0]:
                     pass
                 else: idx_to_pop.append(fly_index)
             else:
@@ -132,3 +154,39 @@ class FlyDetector:
         min_idx = start_index - pixel_idx - half_window_size
 
         return min_idx, max_idx
+    
+    
+class InspectDetectedFlies:
+    
+    def __init__(self, index: str, database: Database):
+        self.index = index
+        self.database = database        
+        self.file_info = self.database.get_file_info_df(index = self.index)
+        
+    def plot_results(self):
+        fly_coords = np.asarray(self.file_info['corrected_fly_coords'][0])
+        vial_cropping_coords = self.file_info['vial_cropping_coords'][0]
+        frame_index = self.file_info['time_passed'][0]*30
+        detection_configs = self.file_info['detection_configs'][0]
+        
+
+        reader = iio.get_reader(self.file_info['video_filepath'][0])
+        image = reader.get_data(frame_index)
+        reader.close()
+        
+        vial = image[200:1000, vial_cropping_coords[0] - 100 : vial_cropping_coords[1] + 100]
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,15))
+        ax1.imshow(vial)
+        ax2.imshow(vial)
+        ax2.scatter(fly_coords[:, 1], fly_coords[:, 0])
+        ax2.vlines(x=[100, vial.shape[1] - 100], 
+                   ymin=detection_configs['min_climbing_height'], 
+                   ymax=5)
+        ax2.hlines(y=[5, detection_configs['min_climbing_height']],
+                   xmin=100, 
+                   xmax=vial.shape[1] - 100)
+        plt.show()
+        
+        
+        

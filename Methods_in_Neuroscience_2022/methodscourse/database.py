@@ -6,7 +6,7 @@ from math import isnan
 
 from skimage.io import imread, imsave
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 
 TIMEPOINTS_TO_ANALYZE = [1, 2, 3, 4, 5]
@@ -50,7 +50,8 @@ class Database:
                       'vial_cropping_coords': list(),
                       'corrected_detected_flies': list(),
                       'corrected_fly_coords': list(),
-                      'video_filepath': list()}
+                      'video_filepath': list(),
+                      'detection_configs': list()}
         index_count = 0
         for filename in self.files:
             for time_passed in TIMEPOINTS_TO_ANALYZE:
@@ -62,19 +63,23 @@ class Database:
                 file_infos['video_filepath'].append(self.recordings_dir + filename)
                 file_infos['time_passed'].append(time_passed)
                 for key in ['all_detected_flies', 'all_fly_coords', 
-                            'vial_cropping_coords', 'corrected_detected_flies', 'corrected_fly_coords']:
+                            'vial_cropping_coords', 'corrected_detected_flies', 'corrected_fly_coords',
+                            'detection_configs']:
                     file_infos[key].append(None)
                 index_count += 1
         return file_infos
     
     
-    def get_file_info_df(self, file_id: str) -> Dict:
+    def get_file_info_df(self, index: Optional[str]=None, file_id: Optional[str]=None) -> Dict:
         file_info_df = pd.DataFrame(data=self.file_infos)
-        file_info_df = file_info_df.loc[file_info_df['file_id'] == file_id]
+        if index != None:
+            file_info_df = file_info_df.loc[file_info_df['index'] == index]
+        elif file_id != None:
+            file_info_df = file_info_df.loc[file_info_df['file_id'] == file_id]
         return file_info_df.to_dict('list')
     
     
-    def add_detected_flies(self, file_id: str, time_passed: int, all_fly_coords: List, vial_cropping_coords: Tuple, corrected_fly_coords: List):
+    def add_detected_flies(self, file_id: str, time_passed: int, all_fly_coords: List, vial_cropping_coords: Tuple, corrected_fly_coords: List, detection_configs: Dict):
         
         for i in range(len(self.file_infos['file_id'])):
             if (self.file_infos['file_id'][i] == file_id) & (self.file_infos['time_passed'][i] == time_passed):
@@ -85,9 +90,10 @@ class Database:
         self.file_infos['vial_cropping_coords'][entry_index] = vial_cropping_coords
         self.file_infos['corrected_detected_flies'][entry_index] = len(corrected_fly_coords)
         self.file_infos['corrected_fly_coords'][entry_index] = corrected_fly_coords
+        self.file_infos['detection_configs'][entry_index] = detection_configs
         
 
-    def save_file_infos(self, prefix: str=''):
+    def save_file_infos(self, prefix: str):
         with open(f'{self.results_dir}{prefix}file_info_results.p', 'wb') as io:
             pickle.dump(self.file_infos, io)
 
@@ -113,7 +119,8 @@ class Database:
 
                 if no_results_present:
                     for key in ['all_detected_flies', 'all_fly_coords', 
-                                'vial_cropping_coords', 'corrected_detected_flies', 'corrected_fly_coords']:
+                                'vial_cropping_coords', 'corrected_detected_flies', 'corrected_fly_coords',
+                                'detection_configs']:
 
                         self.file_infos[key][index] = results[key][index]
                 
