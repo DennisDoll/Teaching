@@ -21,11 +21,9 @@ class Database:
     def __init__(self, root_dir: str):
         self.root_dir = root_dir
         self.create_subdirs()        
-        self.files = list_no_hidden(self.recordings_dir)
-        self.files.sort()
-        self.file_infos = self.create_file_infos()
         self.templates_dir = f'{root_dir}templates/'
         self.foam_template = imread(f'{self.templates_dir}foam/001_foam.png')
+        self.file_id_tracker_for_recordings = 0
         
     
     def create_subdirs(self):
@@ -38,6 +36,13 @@ class Database:
         self.results_dir = f'{self.root_dir}results/'
         
 
+    def prepare_database_for_analysis(self):
+        self.files = list_no_hidden(self.recordings_dir)
+        self.files = [filename for filename in self.files if filename.endswith('mp4')]
+        self.files.sort()
+        self.file_infos = self.create_file_infos()
+    
+    
     def create_file_infos(self) -> Dict:
         file_infos = {'index': list(),
                       'file_id': list(),

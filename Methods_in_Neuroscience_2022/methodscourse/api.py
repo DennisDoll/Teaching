@@ -1,6 +1,5 @@
 from .database import Database, list_no_hidden
 from .analysis import FlyDetector, InspectDetectedFlies
-from .stats_and_plots import StatsPlotter
 
 import os
 from typing import List, Optional
@@ -18,6 +17,12 @@ class API:
         self.database = Database(root_dir)
         
 
+    def record_experiment(self, group_id: str, vial_id: int, stimulus_indicator: str):
+        from .recording import Recorder
+        recorder = Recorder(database=self.database)
+        self.database = recorder.start_recording(group_id=group_id, vial_id=vial_id, stimulus_indicator=stimulus_indicator)
+        
+        
     def detect_flies(self, 
                      file_ids: List,
                      cropping_buffer_zone: int=CROPPING_BUFFER_ZONE, 
@@ -26,6 +31,9 @@ class API:
                      min_distance: int=MIN_DISTANCE,
                      overwrite: bool=False,
                      quick_view: bool=False):
+        
+        if hasattr(self.database, 'file_infos') == False:
+            self.database.prepare_database_for_analysis()
         
         for file_id in file_ids:
             fly_detector = FlyDetector(file_id = file_id, 
@@ -53,6 +61,7 @@ class API:
             
     
     def plot_results(self, save: bool=False, show: bool=True):
+        from .stats_and_plots import StatsPlotter
         stats_plotter = StatsPlotter(database = self.database)
         stats_plotter.show_results(save=save, show=show)
     
