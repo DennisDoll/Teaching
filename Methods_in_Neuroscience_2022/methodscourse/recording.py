@@ -20,8 +20,9 @@ class Recorder:
         with PiCamera() as camera:
             #camera.vflip = True
             camera.start_preview()
+            sleep(2)
             camera.start_recording(filepath)
-            sleep(7)
+            sleep(8)
             camera.stop_preview()
         self.database.file_id_tracker_for_recordings += 1
         
