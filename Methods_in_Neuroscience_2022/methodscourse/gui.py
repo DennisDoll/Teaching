@@ -8,8 +8,8 @@ import os
 from typing import List
 
 
-def launch():
-    display(Gui().widget)
+def launch_gui():
+    display(GUI().widget)
 
 
 class GUI:
