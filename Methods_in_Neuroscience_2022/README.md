@@ -25,7 +25,7 @@ Once this theoretical part is concluded, the students will use the software tool
 Over the course of these two weeks, we developed a GUI that allowed us to record the experimental trials, process the data, perform statistical analyses,
 and eventually visualize the results of the experiments that we conducted:
 
--- insert stats result here --
+![Results_2022](additional_files/statistical_analyses.png)
 
 ## Additional insights
 
@@ -36,26 +36,26 @@ Below, you can also find an image of the experimental setup as well as some scre
 We were using a Raspberry Pi 4B (4 GB RAM) and a Raspberry Pi camera module (8MP, v2) to record short (8 s) videos of adult *Drosophila melanogaster* prior to
 and after 30 seconds exposure to a strong white light source:
 
--- insert image of setup here -- 
+![Experimental_setup](additional_files/experimental_setup.png)
 
 The software tool that we created to record and analyze the experiments was based on interactive widgets (Ipywidgets) in a virtual notebook (Jupyter Notebook).
 It allowed us to acquire the data:
 
--- screenshot recording --
+![Recording_screen](additional_files/screenshot_recording.png)
 
 and also to process the recorded data in order to be able to perform statistical analysis. In our case, this required the detection of flies, which was achieved
 by using a relatively straightforward template matching approach. 
 
--- screenshot of detection options --
+![Detection_screen](additional_files/screenshot_detection.png)
 
 While this is surely not fully optimal yet, it yielded sufficiently good results:
 
--- screenshot of inspection --
+![Inspection_screen](additional_files/screenshot_inspection.png)
 
 Finally, the GUI also enabled us to compute the statistical analyses (Repeated-measures ANOVA for the comparison of pre- vs. post- stimulation within each group; 
 Mixed-Models ANOVA for the comparison between wildtype and transgenic flies) and to plot the data:
 
--- screenshot of the stats and plotting section --
+![Results_screen](additional_files/screenshot_results.png)
 
 ## Concluding remarks
 
