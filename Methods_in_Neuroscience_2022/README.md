@@ -65,6 +65,6 @@ We hope this course was as much fun for all students as it was for us during its
 on the actual data that we recorded (which we could not upload to this repository due to space limits), please feel free to contact us
 (for instance via e-mail: Segebarth_D@ukw.de)!
 
-Furthermore, we would like to thank our colleagues who generously provided us with the flies used in this course!
+Furthermore, we would like to thank Christian Wegener from the Department of [Neurogenetics](https://www.biozentrum.uni-wuerzburg.de/en/neurogenetics/starseite/) who generously provided us with the flies used in this course!
 
 
